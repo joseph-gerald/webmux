@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""Display local or remote images through tmux in webmux."""
+
+import os
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+MAX_DOWNLOAD = 50 * 1024 * 1024
+IIP_START = b'\x1b]1337;File='
+SIXEL_START = b'\x1bPq'
+SIXEL_END = b'\x1b\\'
+
+
+def native_sixel():
+    """Ask the pane's tmux server, rather than guessing from the client binary."""
+    if not os.environ.get('TMUX'):
+        return False
+    try:
+        # tmux panes inherit the server's environment, not the attach client's.
+        # Use the server socket embedded in $TMUX with the patched client.
+        tmux = os.environ.get('WEBMUX_TMUX_BIN', 'tmux')
+        return subprocess.check_output(
+            [tmux, 'display-message', '-p', '#{sixel_support}'],
+            stderr=subprocess.DEVNULL, timeout=2
+        ).strip() == b'1'
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return False
+
+
+def normalize_sixel(data):
+    """timg 1.6 doubles its SIXEL delimiters on redirected stdout."""
+    return data.replace(SIXEL_START + SIXEL_START, SIXEL_START).replace(
+        SIXEL_END + SIXEL_END, SIXEL_END
+    )
+
+
+def stream_sixel(stream):
+    """Normalize delimiters even when timg splits them across read chunks."""
+    pending = b''
+    in_sixel = False
+    while chunk := stream.read1(64 * 1024):
+        pending += chunk
+        while pending:
+            first = pending.find(b'\x1b')
+            if first < 0:
+                os.write(1, pending)
+                pending = b''
+                break
+            if first:
+                os.write(1, pending[:first])
+                pending = pending[first:]
+            marker = SIXEL_END if in_sixel else SIXEL_START
+            doubled = marker + marker
+            if len(pending) < len(doubled) and doubled.startswith(pending):
+                break
+            if pending.startswith(doubled):
+                os.write(1, marker)
+                pending = pending[len(doubled):]
+                in_sixel = not in_sixel
+            else:
+                os.write(1, pending[:1])
+                pending = pending[1:]
+    if pending:
+        os.write(1, normalize_sixel(pending))
+
+
+def emit(data):
+    """Forward timg output, wrapping each iTerm image for tmux."""
+    if not os.environ.get('TMUX'):
+        os.write(1, data)
+        return
+    pos = 0
+    while True:
+        found = data.find(IIP_START, pos)
+        if found < 0:
+            os.write(1, data[pos:])
+            break
+        os.write(1, data[pos:found])
+        bel = data.find(b'\x07', found + len(IIP_START))
+        st = data.find(b'\x1b\\', found + len(IIP_START))
+        if bel < 0 and st < 0:
+            os.write(1, data[found:])
+            break
+        end = min(x for x in (bel + 1 if bel >= 0 else -1, st + 2 if st >= 0 else -1) if x >= 0)
+        image = data[found:end]
+        os.write(1, b'\x1bPtmux;' + image.replace(b'\x1b', b'\x1b\x1b') + b'\x1b\\')
+        pos = end
+
+
+def download(url, directory):
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ('http', 'https'):
+        raise ValueError('only http(s) image URLs are supported')
+    # Keep a useful extension for decoders that use it for format detection.
+    ext = os.path.splitext(urllib.parse.unquote(parsed.path))[1].lower()
+    if ext not in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg', '.qoi'):
+        ext = ''
+    request = urllib.request.Request(url, headers={'User-Agent': 'webmux-img/1.0'})
+    with urllib.request.urlopen(request, timeout=15) as response:
+        length = response.headers.get('Content-Length')
+        if length and int(length) > MAX_DOWNLOAD:
+            raise ValueError('remote image exceeds 50 MB')
+        output = tempfile.NamedTemporaryFile(dir=directory, suffix=ext, delete=False)
+        with output:
+            remaining = MAX_DOWNLOAD
+            while chunk := response.read(min(64 * 1024, remaining + 1)):
+                remaining -= len(chunk)
+                if remaining < 0:
+                    raise ValueError('remote image exceeds 50 MB')
+                output.write(chunk)
+        return output.name
+
+
+def animated_gif(filename):
+    try:
+        return int(subprocess.check_output(
+            ['magick', 'identify', '-format', '%n', filename], stderr=subprocess.DEVNULL
+        ).decode().splitlines()[0]) > 1
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return False
+
+
+def play_gif(filename, options, directory, sixel=False):
+    """Render frames individually; timg needs PTY pixel geometry for animation."""
+    frames = subprocess.check_output(
+        ['magick', 'identify', '-format', '%T\n', filename], stderr=subprocess.DEVNULL
+    ).splitlines()
+    subprocess.run(['magick', filename, '-coalesce', os.path.join(directory, 'frame-%d.png')],
+                   check=True, stdout=subprocess.DEVNULL)
+    try:
+        while True:
+            for index, delay in enumerate(frames):
+                frame = os.path.join(directory, f'frame-{index}.png')
+                result = subprocess.run(['timg', '-ps' if sixel else '-pi', *options, frame], stdout=subprocess.PIPE)
+                if result.returncode:
+                    return result.returncode
+                if sixel:
+                    os.write(1, normalize_sixel(result.stdout))
+                else:
+                    emit(result.stdout)
+                time.sleep(max(.04, int(delay) / 100))
+    except (KeyboardInterrupt, BrokenPipeError):
+        return 0
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        sys.exit('usage: img [--hires|--blocks] IMAGE-or-URL [IMAGE-or-URL ...]')
+    hires = '--hires' in sys.argv[1:] or '--blocks' not in sys.argv[1:]
+    sixel = hires and native_sixel()
+    try:
+        with tempfile.TemporaryDirectory(prefix='webmux-img-') as directory:
+            args = []
+            for arg in sys.argv[1:]:
+                if arg in ('--hires', '--blocks'):
+                    continue
+                if arg.startswith(('https://', 'http://')):
+                    args.append(download(arg, directory))
+                else:
+                    args.append(arg)
+            images = [arg for arg in args if arg.lower().endswith('.gif') and os.path.isfile(arg)]
+            if hires and len(images) == 1 and animated_gif(images[0]):
+                options = [arg for arg in args if arg != images[0]]
+                sys.exit(play_gif(images[0], options, directory, sixel))
+            process = subprocess.Popen(['timg', '-ps' if sixel else '-pi' if hires else '-pq', *args], stdout=subprocess.PIPE)
+            # Stream frames as timg produces them: animated GIFs otherwise
+            # never appear because timg loops them until interrupted.
+            pending = b''
+            start = b'\x1b]1337;File='
+            try:
+                if sixel:
+                    stream_sixel(process.stdout)
+                    sys.exit(process.wait())
+                while chunk := process.stdout.read1(64 * 1024):
+                    if not hires or not os.environ.get('TMUX'):
+                        os.write(1, chunk)
+                        continue
+                    pending += chunk
+                    while pending:
+                        found = pending.find(start)
+                        if found < 0:
+                            # Keep only a possible partial start sequence.
+                            keep = min(len(pending), len(start) - 1)
+                            if len(pending) > keep:
+                                os.write(1, pending[:-keep])
+                                pending = pending[-keep:]
+                            break
+                        if found:
+                            os.write(1, pending[:found])
+                            pending = pending[found:]
+                        bel = pending.find(b'\x07', len(start))
+                        st = pending.find(b'\x1b\\', len(start))
+                        if bel < 0 and st < 0:
+                            break
+                        end = min(x for x in (bel + 1 if bel >= 0 else -1, st + 2 if st >= 0 else -1) if x >= 0)
+                        image = pending[:end]
+                        os.write(1, b'\x1bPtmux;' + image.replace(b'\x1b', b'\x1b\x1b') + b'\x1b\\')
+                        pending = pending[end:]
+                if pending and hires and os.environ.get('TMUX'):
+                    os.write(1, pending)
+                sys.exit(process.wait())
+            except (KeyboardInterrupt, BrokenPipeError):
+                process.terminate()
+                process.wait()
+                sys.exit(130)
+    except (OSError, ValueError, urllib.error.URLError) as error:
+        sys.exit(f'img: {error}')

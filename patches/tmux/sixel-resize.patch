@@ -1,0 +1,138 @@
+--- a/screen.c
++++ b/screen.c
+@@ -339,6 +339,10 @@
+     int eat_empty, int cursor)
+ {
+ 	u_int	cx = s->cx, cy = s->grid->hsize + s->cy;
++#ifdef ENABLE_SIXEL
++	struct image	*im, *im1;
++	u_int		 old_hsize = s->grid->hsize;
++#endif
+ 
+ 	if (s->write_list != NULL)
+ 		screen_write_free_list(s);
+@@ -361,13 +365,24 @@
+ 	if (sy != screen_size_y(s))
+ 		screen_resize_y(s, sy, eat_empty, &cy);
+ 
+-#ifdef ENABLE_SIXEL
+-	image_free_all(s);
+-#endif
+-
+ 	if (reflow)
+ 		screen_reflow(s, sx, &cx, &cy, cursor);
+ 
++#ifdef ENABLE_SIXEL
++	/* Preserve images on pane resize. Adjust the origin for lines pulled
++	 * from or pushed into history; the tty clips any partly visible image.
++	 * Reflowed text does not carry images, so they remain at their cell
++	 * positions rather than following rewrapped lines. */
++	TAILQ_FOREACH_SAFE(im, &s->images, entry, im1) {
++		int new_y = (int)im->py + (int)old_hsize -
++		    (int)s->grid->hsize;
++		if (new_y < 0 || new_y >= (int)sy || im->px >= sx)
++			image_free_one(im);
++		else
++			im->py = new_y;
++	}
++#endif
++
+ 	if (cy >= s->grid->hsize) {
+ 		s->cx = cx;
+ 		s->cy = cy - s->grid->hsize;
+--- a/image.c
++++ b/image.c
+@@ -50,8 +50,8 @@
+ 	    im->px, im->py, s);
+ }
+
+-static void
+-image_free(struct image *im)
++void
++image_free_one(struct image *im)
+ {
+ 	image_log(im, __func__, NULL);
+ 
+@@ -73,7 +73,7 @@
+ 	if (redraw)
+ 		log_debug ("%s", __func__);
+ 	TAILQ_FOREACH_SAFE(im, &s->images, entry, im1)
+-		image_free(im);
++		image_free_one(im);
+ 	return (redraw);
+ }
+ 
+@@ -140,7 +140,7 @@
+ 
+ 	TAILQ_INSERT_TAIL(&all_images, im, all_entry);
+ 	if (++all_images_count == MAX_IMAGE_COUNT)
+-		image_free(TAILQ_FIRST(&all_images));
++		image_free_one(TAILQ_FIRST(&all_images));
+ 
+ 	return (im);
+ }
+@@ -155,7 +155,7 @@
+ 		in = (py + ny > im->py && py < im->py + im->sy);
+ 		image_log(im, __func__, "py=%u, ny=%u, in=%d", py, ny, in);
+ 		if (in) {
+-			image_free(im);
++			image_free_one(im);
+ 			redraw = 1;
+ 		}
+ 	}
+@@ -175,7 +175,7 @@
+ 		    px + nx > im->px);
+ 		image_log(im, __func__, "py=%u, ny=%u, in=%d", py, ny, in);
+ 		if (in) {
+-			image_free(im);
++			image_free_one(im);
+ 			redraw = 1;
+ 		}
+ 	}
+@@ -199,7 +199,7 @@
+ 		}
+ 		if (im->py + im->sy <= lines) {
+ 			image_log(im, __func__, "2, lines=%u", lines);
+-			image_free(im);
++			image_free_one(im);
+ 			redraw = 1;
+ 			continue;
+ 		}
+--- a/tmux.h
++++ b/tmux.h
+@@ -3846,6 +3846,7 @@
+ #ifdef ENABLE_SIXEL
+ /* image.c */
+ int		 image_free_all(struct screen *);
++void		 image_free_one(struct image *);
+ struct image	*image_store(struct screen *, struct sixel_image *);
+ int		 image_check_line(struct screen *, u_int, u_int);
+ int		 image_check_area(struct screen *, u_int, u_int, u_int, u_int);
+--- a/tty.c
++++ b/tty.c
+@@ -140,6 +140,13 @@
+ 		    tty->out != NULL &&
+ 		    !(tty->flags & TTY_WINSIZEQUERY) &&
+ 		    (tty->term->flags & TERM_VT100LIKE)) {
++			/* A PTY can report only rows and columns. Keep the last
++			 * pixel geometry until the terminal answers the size query;
++			 * otherwise a resize paints image fallbacks and erases them. */
++			if (xpixel == 0)
++				xpixel = tty->xpixel;
++			if (ypixel == 0)
++				ypixel = tty->ypixel;
+ 			tty_puts(tty, "\033[18t\033[14t");
+			tty->flags |= TTY_WINSIZEQUERY;
+		}
+--- a/tty-keys.c
++++ b/tty-keys.c
+@@ -730,6 +730,11 @@
+ 		char_x = (xpixel && tty->sx) ? xpixel / tty->sx : 0;
+ 		char_y = (ypixel && tty->sy) ? ypixel / tty->sy : 0;
+ 		tty_set_size(tty, tty->sx, tty->sy, char_x, char_y);
++		/* The initial attach can draw before pixel geometry is known.
++		 * Replace the fallback with stored SIXEL once the terminal reports
++		 * its dimensions. */
++		if (char_x && char_y && c->session != NULL)
++			server_redraw_client(c);
+ 		tty_invalidate(tty);

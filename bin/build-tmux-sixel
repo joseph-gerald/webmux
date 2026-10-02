@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Build a SIXEL-capable tmux with the webmux pane-resize fix. The binary is
+# installed separately; a running tmux server keeps its existing executable.
+version=3.7c
+sha256=7c60cae9a0e25288e2e24750aafc9e8800fc7fd4555e447e1b29ee4201cfb3bf
+root=$(cd "$(dirname "$0")/.." && pwd)
+output=${1:-${HOME:?HOME must be set}/.local/bin/webmux-tmux}
+# Resolve before entering the temporary source directory.
+[[ "$output" = /* ]] || output="$PWD/$output"
+archive=${WEBMUX_TMUX_ARCHIVE:-}
+work=$(mktemp -d "${TMPDIR:-/tmp}/webmux-tmux-build.XXXXXXXX")
+trap 'rm -rf "$work"' EXIT
+
+if [[ -n "$archive" ]]; then
+  cp "$archive" "$work/tmux.tar.gz"
+else
+  curl -fsSL "https://github.com/tmux/tmux/releases/download/$version/tmux-$version.tar.gz" -o "$work/tmux.tar.gz"
+fi
+if ! printf '%s  %s\n' "$sha256" "$work/tmux.tar.gz" | sha256sum --check --status; then
+  printf 'tmux %s archive checksum mismatch\n' "$version" >&2
+  exit 1
+fi
+tar -xzf "$work/tmux.tar.gz" -C "$work"
+cd "$work/tmux-$version"
+patch -p1 < "$root/patches/tmux/sixel-resize.patch"
+if ! ./configure --enable-sixel > "$work/configure.log" 2>&1; then
+  cat "$work/configure.log" >&2
+  exit 1
+fi
+make -s -j"$(nproc)"
+install -D -m 0755 tmux "$output"
+"$output" -V

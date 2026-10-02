@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="webmux">
+<meta name="mobile-web-app-capable" content="yes">
+<title>webmux</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
+<link rel="stylesheet" href="/style.css?v=20261002-frontend">
+</head>
+<body>
+
+<!-- auth -->
+<div id="auth" class="auth">
+  <div class="auth-box">
+    <div id="auth-methods">
+      <button id="passkey-login" class="provider-btn" type="button" hidden>Sign in with passkey</button>
+      <p id="passkey-login-error" class="auth-err" role="alert" hidden></p>
+      <div id="auth-providers"></div>
+      <button id="use-secret" class="secret-method-btn" type="button">Sign in with token</button>
+    </div>
+    <div id="secret-auth" hidden>
+      <form id="auth-form" autocomplete="off">
+        <label class="prompt">
+          <span class="prompt-sym">&gt;</span>
+          <input id="secret" type="password" spellcheck="false"
+                 placeholder="token" aria-label="token">
+        </label>
+      </form>
+      <p id="auth-err" class="auth-err" role="alert" hidden>access denied</p>
+      <button id="back-to-methods" class="auth-back" type="button">← other sign-in methods</button>
+    </div>
+  </div>
+</div>
+
+<div id="boot-error" class="auth" hidden>
+  <div class="auth-box">
+    <p class="auth-err" role="alert">Unable to start the terminal. Check the connection and reload to try again.</p>
+    <button id="boot-reload" class="provider-btn" type="button">Reload</button>
+  </div>
+</div>
+
+<!-- app -->
+<div id="app" class="app" hidden>
+  <div id="disconnected-overlay" class="disconnected-overlay" hidden>
+    <div class="overlay-content">
+      <div class="wifi-icon"></div>
+      <div class="disconnected-text">Disconnected</div>
+      <div class="disconnected-actions" id="disconnected-actions" hidden>
+        <button type="button" class="overlay-btn overlay-btn-primary" id="btn-reclaim">Reclaim</button>
+        <button type="button" class="overlay-btn" id="btn-view-only">View only</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- privacy: someone is watching (view-only attach) -->
+  <div id="watcher-eye" class="watcher-eye" hidden aria-live="polite">
+    <div class="watcher-eye-orb" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </div>
+    <span class="watcher-eye-count" id="watcher-eye-count" hidden>1</span>
+    <span class="watcher-eye-label">watching</span>
+  </div>
+
+  <!-- terminal fills entire app area including behind bars -->
+  <main id="term" class="term"></main>
+
+  <!-- mirror canvas behind bars -->
+  <canvas id="mirror-canvas" aria-hidden="true"></canvas>
+
+  <!-- bars on top -->
+  <header class="bar sessions-bar">
+    <nav class="sessions" id="sessions" aria-label="tmux sessions"></nav>
+    <div class="font-size-ctrl" id="font-size-ctrl" title="font size" role="group" aria-label="font size">
+      <button type="button" class="bar-add font-size-btn" id="font-dec" aria-label="decrease font size">−</button>
+      <button type="button" class="bar-add font-size-label" id="font-size-label" aria-label="reset font size" title="reset font size">A</button>
+      <button type="button" class="bar-add font-size-btn" id="font-inc" aria-label="increase font size">+</button>
+    </div>
+    <button class="bar-add bell-toggle" id="status-bell" title="notifications">♪</button>
+    <button class="bar-add" data-passkeys type="button" title="Manage passkeys" aria-label="Manage passkeys">⚿</button>
+    <button class="bar-add" id="perf-settings" title="battery & display" aria-label="battery and display">
+      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M13 2 4 14h7l-1 8 10-14h-7l0-6z"/></svg>
+    </button>
+    <button class="bar-add sakura-admin" id="sakura-admin" hidden title="admin" aria-label="admin">
+      <svg width="14" height="14" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(32,32)"><g id="wm-pt"><path d="M-2.2,-26 L0,-21.5 L2.2,-26 C7,-26 11,-19 9,-11 C8,-6 4,-3 0,-3 C-4,-3 -8,-6 -9,-11 C-11,-19 -7,-26 -2.2,-26 Z"/></g><use href="#wm-pt" transform="rotate(72)"/><use href="#wm-pt" transform="rotate(144)"/><use href="#wm-pt" transform="rotate(216)"/><use href="#wm-pt" transform="rotate(288)"/></g></svg>
+    </button>
+    <button class="bar-add" id="sess-add" title="new session">+</button>
+  </header>
+  <header class="bar tabs-bar">
+    <nav class="tabs" id="tabs" aria-label="tmux windows"></nav>
+    <button class="bar-add" id="tab-add" title="new window">+</button>
+  </header>
+
+  <!-- status bar at bottom -->
+  <footer class="status-bar" id="status-bar">
+    <span class="status-item" id="status-cursor" title="cursor position">1:1</span>
+    <span class="status-item" id="status-size" title="terminal size">80×24</span>
+    <span class="status-item status-right" id="status-mode" title="click to toggle spectator mode">interactive</span>
+  </footer>
+</div>
+
+<div id="admin" class="admin" hidden>
+  <div class="admin-inner">
+    <h1>webmux<span> · who</span></h1>
+    <div class="admin-sub">
+      <span id="admin-count"></span>
+      <span class="spacer"></span>
+      <button type="button" class="admin-back" data-passkeys>passkeys</button>
+      <button type="button" class="admin-back" id="admin-back">← back</button>
+    </div>
+    <h2>ATTACHED</h2>
+    <div id="admin-attached" class="admin-table-wrap"></div>
+    <h2>LOGINS</h2>
+    <div id="admin-tickets" class="admin-table-wrap"></div>
+    <h2>HISTORY</h2>
+    <div id="admin-history" class="admin-table-wrap"></div>
+  </div>
+</div>
+
+<dialog id="passkey-dialog" class="passkey-dialog" aria-labelledby="passkey-title">
+  <div class="passkey-heading"><h2 id="passkey-title">Passkeys</h2><button type="button" class="passkey-close" aria-label="Close passkeys">×</button></div>
+  <p>Sign in with a device, password manager or security key. Sign in again before making changes if your login is over five minutes old.</p>
+  <div class="passkey-list"></div>
+  <form hidden>
+    <fieldset>
+    <label>Account name<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9._\-]{0,63}" placeholder="your-name"></label>
+    <label>Passkey name<input name="label" required maxlength="64" value="This device"></label>
+    <label class="passkey-role"><input type="checkbox" name="admin" checked> Administrator (new accounts only)</label>
+    <button type="submit" class="provider-btn">Add passkey</button>
+    </fieldset>
+  </form>
+  <p class="passkey-message" role="status" aria-live="polite"></p>
+  <button type="button" class="auth-back passkey-reauth" hidden>Sign out and sign in again</button>
+</dialog>
+
+<script src="/vendor/xterm/lib/xterm.js"></script>
+<script src="/vendor/addon-fit/lib/addon-fit.js"></script>
+<script src="/vendor/addon-web-links/lib/addon-web-links.js"></script>
+<script src="/vendor/addon-webgl/lib/addon-webgl.js"></script>
+<script src="/vendor/addon-unicode11/lib/addon-unicode11.js"></script>
+<script src="/vendor/addon-image/lib/addon-image.js?v=0.9.0"></script>
+<script src="/fp.js?v=20260822-1"></script>
+<script src="/vendor/webauthn.js"></script>
+<script src="/passkeys.js?v=20261002-frontend"></script>
+<script src="/app.js?v=20261002-frontend"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+Nerd Fonts v3.4.0 glyph-source notices
+====================================
+
+The bundled fonts include glyphs adapted and combined by Nerd Fonts. webmux
+distributes those patched fonts without further modification. Upstream source:
+https://github.com/ryanoasis/nerd-fonts/tree/v3.4.0/src/glyphs
+
+MIT-licensed glyph sources
+-------------------------
+
+Devicons / Devicon:
+Copyright (c) 2015 konpa
+https://github.com/devicons/devicon/blob/v2.16.0/LICENSE
+
+Additional Devicons glyphs by vorillaz:
+https://github.com/vorillaz/devicons/blob/main/LICENSE
+
+Font Awesome Extension:
+Copyright (c) 2017 André Luiz Gava
+https://github.com/AndreLZGava/font-awesome-extension/blob/master/LICENCE
+
+IEC Power Symbols:
+Copyright (c) 2013 Joe Loughry
+https://github.com/jloughry/Unicode/blob/master/LICENSE.txt
+
+Seti-UI (adapted by Nerd Fonts as "Original Source"):
+Copyright (c) 2014 Jesse Weed
+https://github.com/jesseweed/seti-ui/blob/master/LICENSE.md
+
+Nerd Fonts original glyphs:
+Copyright (c) 2014 Ryan L McIntyre
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/LICENSE
+
+Octicons:
+Copyright (c) 2023 GitHub Inc.
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/octicons/LICENSE
+
+Powerline Extra Symbols:
+Copyright (c) 2016 Ryan L McIntyre
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/powerline-extra/LICENSE
+
+Powerline Symbols:
+Copyright 2013 Kim Silkebækken and other contributors
+https://github.com/powerline/powerline
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/powerline-symbols/LICENSE.txt
+
+The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+SIL Open Font License 1.1 sources
+--------------------------------
+
+The full SIL Open Font License 1.1 text is included in OFL.txt in this directory.
+
+Pomicons:
+Copyright (c) 2021, Gabriele Lana gabriele.lana@gmail.com
+with Reserved Font Name Pomicons.
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/pomicons/LICENSE
+
+Weather Icons by Erik Flowers:
+https://github.com/erikflowers/weather-icons
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/weather-icons/OFL.txt
+The upstream copyright header retains these placeholders:
+Copyright (c) <dates>, <Erik Flowers> (<URL|email>),
+with Reserved Font Name <Reserved Font Name>.
+Copyright (c) <dates>, <additional Copyright Holder> (<URL|email>),
+with Reserved Font Name <additional Reserved Font Name>.
+Copyright (c) <dates>, <additional Copyright Holder> (<URL|email>).
+
+Font Awesome Free
+-----------------
+
+Fonticons, Inc. (https://fontawesome.com)
+Copyright (c) 2022 Fonticons, Inc. (https://fontawesome.com)
+with Reserved Font Name: "Font Awesome".
+
+Font Awesome Free licenses its font files under SIL OFL 1.1 (see OFL.txt).
+Its SVG/JS icons are licensed under Creative Commons Attribution 4.0:
+https://creativecommons.org/licenses/by/4.0/
+That license includes its disclaimer of warranties and limitation of liability.
+Nerd Fonts adapts these icons into the bundled fonts.
+Full upstream notice:
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/font-awesome/LICENSE.txt
+
+All brand icons are trademarks of their respective owners. The use of these
+trademarks does not indicate endorsement of the trademark holder by Font
+Awesome, nor vice versa. Please do not use brand logos for any purpose except
+to represent the company, product, or service to which they refer.
+
+Codicons
+--------
+
+Codicons by Microsoft:
+https://github.com/microsoft/vscode-codicons
+Licensed under Creative Commons Attribution 4.0 International:
+https://creativecommons.org/licenses/by/4.0/
+That license includes its disclaimer of warranties and limitation of liability.
+Nerd Fonts uses version 0.0.35 and fixes glyphs 0xEB40 and 0xEB41 before patching.
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/codicons/README.md
+
+Material Design Icons
+---------------------
+
+Source: https://github.com/Templarian/MaterialDesign-Font
+Nerd Fonts fixes source glyph 0xF1522 before patching.
+https://github.com/ryanoasis/nerd-fonts/blob/v3.4.0/src/glyphs/materialdesign/README.md
+The Apache License 2.0 text is included in APACHE-2.0.txt in this directory.
+Upstream notice follows:
+
+Pictogrammers Free License
+--------------------------
+
+This icon collection is released as free, open source, and GPL friendly by
+the [Pictogrammers](http://pictogrammers.com/) icon group. You may use it
+for commercial projects, open source projects, or anything really.
+
+# Icons: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Some of the icons are redistributed under the Apache 2.0 license. All other
+icons are either redistributed under their respective licenses or are
+distributed under the Apache 2.0 license.
+
+# Fonts: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+All web and desktop fonts are distributed under the Apache 2.0 license. Web
+and desktop fonts contain some icons that are redistributed under the Apache
+2.0 license. All other icons are either redistributed under their respective
+licenses or are distributed under the Apache 2.0 license.
+
+# Code: MIT (https://opensource.org/licenses/MIT)
+The MIT license applies to all non-font and non-icon files.
+
+Font Logos 1.3.0
+----------------
+
+Copyright (c) 2014-2024, Lukas W
+https://github.com/Lukas-W/font-logos
+https://github.com/Lukas-W/font-logos/blob/v1.3.0/LICENSE
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org>

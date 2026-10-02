@@ -1,0 +1,28 @@
+name: tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node: ['22.12.0', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install terminal build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux python3 build-essential
+      - run: npm ci
+      - name: Run tests, including browser passkeys
+        run: |
+          chrome=$(command -v google-chrome)
+          test -x "$chrome"
+          "$chrome" --version
+          WEBMUX_TEST_CHROME="$chrome" npm test
