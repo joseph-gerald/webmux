@@ -814,7 +814,7 @@ async function sessionExists(name) {
 
 // per-session options, shared by createSession() and restoreFromSnapshot()
 async function applySessionOptions(name) {
-  await tmux(['set-option', '-t', name, 'mouse', 'off']);
+  await tmux(['set-option', '-t', name, 'mouse', 'on']);
   await tmux(['set-option', '-t', name, 'status', 'off']);
   // 20k lines/window keeps scrollback useful without making tmux a fat OOM target
   await tmux(['set-option', '-t', name, 'history-limit', '20000']);
@@ -1188,11 +1188,11 @@ async function doBootstrap() {
     out = await tmux(['list-sessions', '-F', '#{session_name}']).catch(() => '');
     sessions = out.trim().split('\n').filter(Boolean);
   }
-  // mouse off: let xterm.js own drag-select/copy natively instead of tmux.
-  // Apply per-session too — a leftover session-level `mouse on` overrides the
-  // global setting, which is why drag-select was still being routed to tmux.
-  for (const s of sessions) await tmux(['set-option', '-t', s, 'mouse', 'off']).catch(() => {});
-  await tmux(['set-option', '-g', 'mouse', 'off']).catch(() => {});
+  // mouse on: browser wheel events reach apps that request mouse mode
+  // (opencode, Claude Code, btop); elsewhere tmux copy-mode scrolls history.
+  // Shift-drag still selects natively in xterm.js.
+  for (const s of sessions) await tmux(['set-option', '-t', s, 'mouse', 'on']).catch(() => {});
+  await tmux(['set-option', '-g', 'mouse', 'on']).catch(() => {});
   // keep crashed panes (see applySessionOptions) — globally, and on any session
   // that was already live before this webmux process started.
   await tmux(['set-option', '-g', 'remain-on-exit', 'failed']).catch(() => {});
