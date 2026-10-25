@@ -1,0 +1,8 @@
+#!/bin/sh
+# `gio open URL` is one of the default browser paths used by libraries. Keep
+# every other gio subcommand intact.
+if [ "$1" = "open" ] && [ -n "$2" ]; then
+  self=$(readlink -f "$0")
+  exec "$(dirname -- "$self")/webmux-open" "$2"
+fi
+exec /usr/bin/gio "$@"

@@ -85,6 +85,21 @@ To keep webmux running in the background and across reboots, follow the
   modules. See the [provider guide](extensions.example/auth/README.md).
 - [Configuration and recovery](docs/configuration.md) · [Clipboard support](CLIPBOARD.md).
 
+## Opening links
+
+Click an HTTP(S) URL or a labeled terminal hyperlink to open it in a new browser
+tab. Terminal apps can also launch the browser from a webmux pane:
+
+```sh
+"$BROWSER" 'https://example.com'
+```
+
+New panes default `BROWSER` to the bundled `webmux-open` helper. The usual
+openers — `xdg-open`, `sensible-browser`, and `gio open` — resolve to webmux
+shims when webmux's `bin` directory is on your shell's `PATH`. A link launched by a program shows a full-screen
+confirmation naming the tab and group you are viewing before anything opens. See
+[browser support](docs/browser-links.md) for existing shells and app setup.
+
 ## Tests
 
 ```sh

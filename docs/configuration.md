@@ -121,6 +121,8 @@ These are disabled on a fresh installation.
 
 ## Other tools
 
+- [Opening browser links](browser-links.md): terminal hyperlinks, default
+  `xdg-open`/`sensible-browser`/`gio open` shims, and `BROWSER` setup.
 - [Clipboard support](../CLIPBOARD.md): OSC 52 setup.
 - `bin/webmux-img`: image display; requires `timg`, and ImageMagick for GIFs.
 - `bin/build-tmux-sixel [output-path]`: optional patched SIXEL tmux build;

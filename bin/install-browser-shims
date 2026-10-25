@@ -1,0 +1,10 @@
+#!/bin/sh
+# Put webmux's browser launchers in front of the system defaults so programs
+# that call xdg-open / sensible-browser / gio open reach the webmux client.
+set -eu
+dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+target=${1:-/usr/local/bin}
+for name in xdg-open x-www-browser gnome-open kde-open kde-open5 exo-open sensible-browser gio; do
+  ln -sf "$dir/$name" "$target/$name"
+done
+echo "installed browser shims in $target"

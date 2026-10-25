@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+'use strict';
+// Send a browser-open request to the webmux client through the pane's terminal.
+const fs = require('node:fs');
+const { execFileSync } = require('node:child_process');
+
+function fail(message) {
+  console.error('webmux-open: ' + message);
+  process.exit(1);
+}
+
+const args = process.argv.slice(2);
+if (args.length === 1 && ['-h', '--help'].includes(args[0])) {
+  console.log('usage: webmux-open URL\nOpen an http(s) URL in the browser connected to this webmux pane.');
+  process.exit(0);
+}
+if (args[0] === '--') args.shift();
+if (args.length !== 1) fail('usage: webmux-open URL');
+let url;
+try {
+  if (args[0].length > 16384 || !/^https?:\/\//i.test(args[0]) || /[\\\x00-\x1f\x7f-\x9f]/.test(args[0])) throw new Error();
+  url = new URL(args[0]);
+  if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.href.length > 16384) throw new Error();
+} catch {
+  fail('expected an http(s) URL without credentials (up to 16 KB)');
+}
+
+let fd;
+try {
+  fd = fs.openSync('/dev/tty', fs.constants.O_WRONLY | fs.constants.O_NOCTTY);
+} catch {
+  // Browser launchers often detach and redirect all three standard streams.
+  // TMUX_PANE still identifies their originating pane on the inherited socket.
+  if (process.env.TMUX && /^%\d+$/.test(process.env.TMUX_PANE || '')) {
+    try {
+      const tty = execFileSync(process.env.WEBMUX_TMUX_BIN || 'tmux',
+        ['display-message', '-p', '-t', process.env.TMUX_PANE, '#{pane_tty}'],
+        { encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      if (/^\/dev\/(?:pts\/\d+|tty[\w.-]+)$/.test(tty)) {
+        fd = fs.openSync(tty, fs.constants.O_WRONLY | fs.constants.O_NOCTTY);
+      }
+    } catch {}
+  }
+}
+if (fd === undefined) fail('no terminal found; run this command inside a webmux pane');
+
+let sequence = '\x1b]777;webmux-open;' + Buffer.from(url.href).toString('base64') + '\x07';
+if (process.env.TMUX) sequence = '\x1bPtmux;' + sequence.replaceAll('\x1b', '\x1b\x1b') + '\x1b\\';
+try {
+  const data = Buffer.from(sequence);
+  let offset = 0;
+  while (offset < data.length) offset += fs.writeSync(fd, data, offset);
+} catch {
+  fail('could not send the link to the terminal');
+} finally {
+  fs.closeSync(fd);
+}

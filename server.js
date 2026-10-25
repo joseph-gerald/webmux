@@ -36,6 +36,8 @@ const OOM_SCORE_ADJ = '-800'; // shield the tmux server from the OOM killer (-10
 // exercised against an isolated tmux server without touching the real one.
 const TMUX_SOCKET = process.env.WEBMUX_TMUX_SOCKET || '';
 const TMUX_BIN = process.env.WEBMUX_TMUX_BIN || 'tmux';
+const BROWSER_BIN_DIR = path.join(__dirname, 'bin');
+const BROWSER = process.env.BROWSER || path.join(BROWSER_BIN_DIR, 'webmux-open');
 let sixelEnabled = false;
 
 // Agent/CI shells often set NO_COLOR et al. for plain tool output; webmux
@@ -45,7 +47,9 @@ const COLOR_STRIP = [
   'CLICOLOR', 'CLICOLOR_FORCE', 'CARGO_TERM_COLOR',
 ];
 function shellEnv(extra = {}) {
-  const env = { ...process.env, WEBMUX_TMUX_BIN: TMUX_BIN, ...extra };
+  const env = { ...process.env, WEBMUX_TMUX_BIN: TMUX_BIN, BROWSER, ...extra };
+  env.PATH = [BROWSER_BIN_DIR, ...(env.PATH || '/usr/local/bin:/usr/bin:/bin').split(path.delimiter)
+    .filter(p => p !== BROWSER_BIN_DIR)].join(path.delimiter);
   for (const k of COLOR_STRIP) delete env[k];
   return env;
 }
@@ -1180,6 +1184,12 @@ function bootstrap() {
 
 async function doBootstrap() {
   let out = await tmux(['list-sessions', '-F', '#{session_name}']).catch(() => '');
+  // Existing tmux daemons retain their original environment across app restarts.
+  // Update the defaults for new panes too; running shells can export BROWSER/PATH.
+  if (out.trim()) {
+    await tmux(['set-environment', '-g', 'BROWSER', BROWSER]);
+    await tmux(['set-environment', '-g', 'WEBMUX_TMUX_BIN', TMUX_BIN]);
+  }
   let sessions = out.trim().split('\n').filter(Boolean);
   if (!sessions.length) {
     // tmux came up empty (fresh daemon after OOM/reboot) — rebuild groups/tabs
@@ -1207,6 +1217,7 @@ async function doBootstrap() {
   // forwards OSC 52 from apps inside tmux (opencode, nvim, copy-mode) to xterm.js
   await tmux(['set-option', '-g', 'set-clipboard', 'on']).catch(() => {});
   await tmux(['set-option', '-as', 'terminal-features', 'xterm-256color:clipboard']).catch(() => {});
+  await tmux(['set-option', '-as', 'terminal-features', 'xterm-256color:hyperlinks']).catch(() => {});
   // The browser supports SIXEL. Only advertise it when the server can
   // retain image data; tmux 3.5a cannot, so keep IIP passthrough there.
   const sixel = (await tmux(['display-message', '-p', '#{sixel_support}']).catch(() => '')).trim() === '1';

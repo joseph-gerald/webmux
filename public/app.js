@@ -450,9 +450,8 @@
     document.body.classList.toggle('perf-fx-none', perfPrefs.uiEffects === 'none');
     document.body.classList.toggle('perf-fx-full', perfPrefs.uiEffects === 'full');
 
-    const label = `battery · ${perfSummaryLabel()}`;
-    const btn = $('#performance-mode');
-    if (btn) btn.textContent = label;
+    const helperValue = $('#performance-mode b');
+    if (helperValue) helperValue.textContent = perfSummaryLabel();
     const barBtn = $('#perf-settings');
     if (barBtn) {
       barBtn.title = `battery & display · ${perfSummaryLabel()}`;
@@ -1487,6 +1486,26 @@
     window.addEventListener('drop', e => e.preventDefault());
   }
 
+  // ---------- icons ----------
+  // Phosphor Icons, regular weight (MIT, phosphoricons.com), inlined so the
+  // app keeps working without a CDN.
+  const ICON_PATHS = {
+    keyboard: 'M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,144H32V64H224V192Zm-16-64a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16H200A8,8,0,0,1,208,128Zm0-32a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16H200A8,8,0,0,1,208,96ZM72,160a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16h8A8,8,0,0,1,72,160Zm96,0a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,160Zm40,0a8,8,0,0,1-8,8h-8a8,8,0,0,1,0-16h8A8,8,0,0,1,208,160Z',
+    x: 'M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z',
+    up: 'M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z',
+    down: 'M205.66,149.66l-72,72a8,8,0,0,1-11.32,0l-72-72a8,8,0,0,1,11.32-11.32L120,196.69V40a8,8,0,0,1,16,0V196.69l58.34-58.35a8,8,0,0,1,11.32,11.32Z',
+    left: 'M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z',
+    right: 'M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z',
+    enter: 'M200,32V176a8,8,0,0,1-8,8H67.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48a8,8,0,0,1,11.32,11.32L67.31,168H184V32a8,8,0,0,1,16,0Z',
+    backspace: 'M216,40H68.53a16.08,16.08,0,0,0-13.72,7.77L9.14,123.88a8,8,0,0,0,0,8.24l45.67,76.11A16.08,16.08,0,0,0,68.53,216H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM61.67,204.12,68.53,200h0ZM216,200H68.53l-43.2-72,43.2-72H216ZM106.34,146.34,124.69,128l-18.35-18.34a8,8,0,0,1,11.32-11.32L136,116.69l18.34-18.35a8,8,0,0,1,11.32,11.32L147.31,128l18.35,18.34a8,8,0,0,1-11.32,11.32L136,139.31l-18.34,18.35a8,8,0,0,1-11.32-11.32Z',
+    more: 'M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,196,116ZM60,116a12,12,0,1,0,12,12A12,12,0,0,0,60,116Z',
+    copy: 'M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z',
+    external: 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z',
+    link: 'M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z',
+  };
+  const icon = (name, cls = '') =>
+    `<svg class="icon ${cls}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="${ICON_PATHS[name]}"/></svg>`;
+
   // ---------- mobile assist controls ----------
   // Send helper keys straight to the PTY. Synthetic KeyboardEvents are
   // untrusted on mobile browsers and may be ignored by xterm's hidden textarea.
@@ -1540,28 +1559,30 @@
     host.className = 'assist';
     host.innerHTML = `
       <div class="assist-backdrop"></div>
-      <div class="assist-menu">
+      <div class="assist-menu" role="group" aria-label="terminal keys">
         <div class="assist-head">
-          <span>terminal helper</span>
-          <button class="assist-dismiss" type="button" aria-label="close helper">×</button>
+          <span class="assist-grip" aria-hidden="true"></span>
+          <button class="assist-dismiss" type="button" aria-label="close helper">${icon('x')}</button>
         </div>
+        <!-- Two rows: text keys on the left, an inverted-T arrow cluster on the right. -->
         <div class="am-grid">
-          <button class="am-btn" data-k="esc">esc</button>
-          <button class="am-btn" data-k="tab">tab</button>
-          <button class="am-btn am-arrow" data-k="up" aria-label="up">↑</button>
-          <button class="am-btn" data-k="enter">⏎</button>
-          <button class="am-btn" data-k="bs">⌫</button>
-          <button class="am-btn am-ctrl" data-ctrl>ctrl</button>
-          <button class="am-btn am-arrow" data-k="left" aria-label="left">←</button>
-          <button class="am-btn am-arrow" data-k="down" aria-label="down">↓</button>
-          <button class="am-btn am-arrow" data-k="right" aria-label="right">→</button>
-          <button class="am-btn am-more" data-more aria-label="more actions">•••</button>
+          <button class="am-btn" type="button" data-k="esc">esc</button>
+          <button class="am-btn" type="button" data-k="tab">tab</button>
+          <button class="am-btn am-glyph" type="button" data-k="bs" aria-label="backspace">${icon('backspace')}</button>
+          <button class="am-btn am-glyph am-arrow" type="button" data-k="up" aria-label="up">${icon('up')}</button>
+          <button class="am-btn am-glyph" type="button" data-k="enter" aria-label="enter">${icon('enter')}</button>
+          <button class="am-btn am-ctrl" type="button" data-ctrl aria-pressed="false">ctrl</button>
+          <button class="am-btn am-glyph am-arrow" type="button" data-k="left" aria-label="left">${icon('left')}</button>
+          <button class="am-btn am-glyph am-arrow" type="button" data-k="down" aria-label="down">${icon('down')}</button>
+          <button class="am-btn am-glyph am-arrow" type="button" data-k="right" aria-label="right">${icon('right')}</button>
         </div>
         <div class="am-clipboard-actions" role="group" aria-label="clipboard actions">
           <button class="am-btn am-action am-paste" type="button" data-act="paste">paste</button>
           <button class="am-btn am-action" type="button" data-act="copy">copy</button>
           <button class="am-btn am-action" type="button" data-act="clipboard"
                   aria-controls="assist-clipboard" aria-expanded="false">clipboard</button>
+          <button class="am-btn am-glyph am-more" type="button" data-more aria-label="more actions"
+                  aria-expanded="false">${icon('more')}</button>
         </div>
         <div id="assist-clipboard" class="am-clipboard" role="region" aria-label="clipboard" hidden>
           <label for="assist-clipboard-text">clipboard text</label>
@@ -1576,24 +1597,24 @@
           </div>
           <div class="am-clipboard-head">
             <span>recent in this tab</span>
-            <button class="am-btn am-action" type="button" data-act="clipboard-clear" disabled>clear history</button>
+            <button class="am-text-btn" type="button" data-act="clipboard-clear" disabled>clear history</button>
           </div>
           <div class="am-clipboard-history" aria-label="recent clipboard text"></div>
         </div>
-        <div class="am-letters" hidden></div>
+        <div class="am-letters" role="group" aria-label="ctrl plus letter" hidden></div>
         <div class="am-actions" hidden>
-          <button class="am-btn am-action" data-act="selectall">select all</button>
-          <button class="am-btn am-action am-upload" data-act="upload">upload</button>
-          <button id="performance-mode" class="am-btn am-action am-performance"
-                  data-act="performance">battery · balanced</button>
+          <button class="am-btn am-action" type="button" data-act="selectall">select all</button>
+          <button class="am-btn am-action" type="button" data-act="upload">upload</button>
+          <button id="performance-mode" class="am-btn am-action am-performance" type="button"
+                  data-act="performance"><span>battery &amp; display</span><b>balanced</b></button>
           <div class="am-wide-row">
             <span class="am-wide-label">width <b id="wide-val">1.0x</b></span>
             <input id="wide-slider" type="range" min="1" max="3" step="0.1" value="1" aria-label="terminal width scale">
           </div>
         </div>
       </div>
-      <button class="assist-fab" aria-label="open helper controls" aria-expanded="false" title="helper controls">
-        <span class="assist-symbol" aria-hidden="true">?</span>
+      <button class="assist-fab" type="button" aria-label="terminal keys" aria-expanded="false" title="terminal keys">
+        ${icon('keyboard', 'assist-fab-open')}${icon('x', 'assist-fab-close')}
       </button>
     `;
     document.body.appendChild(host);
@@ -1728,23 +1749,31 @@
       }
     }
 
-    // A-Z strip for ctrl+letter
-    for (const ch of 'abcdefghijklmnopqrstuvwxyz') {
-      const b = document.createElement('button');
-      b.className = 'am-btn am-letter';
-      b.textContent = ch.toUpperCase();
-      b.addEventListener('click', () => {
-        if (ctrlActive) {
-          pressKey({ key: ch, code: 'Key' + ch.toUpperCase(), ctrlKey: true });
-          setCtrl(false);
-        }
+    // ctrl+letter pad in QWERTY order: three staggered rows on a 20-column
+    // grid (two columns per key) instead of six rows of A-Z.
+    ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'].forEach((keys, row) => {
+      [...keys].forEach((ch, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'am-btn am-letter';
+        b.textContent = ch.toUpperCase();
+        b.setAttribute('aria-label', 'ctrl ' + ch.toUpperCase());
+        b.style.gridRow = String(row + 1);
+        b.style.gridColumn = `${[1, 2, 4][row] + i * 2} / span 2`;
+        b.addEventListener('click', () => {
+          if (ctrlActive) {
+            pressKey({ key: ch, code: 'Key' + ch.toUpperCase(), ctrlKey: true });
+            setCtrl(false);
+          }
+        });
+        lettersEl.appendChild(b);
       });
-      lettersEl.appendChild(b);
-    }
+    });
     let ctrlActive = false;
     function setCtrl(on) {
       ctrlActive = on;
       ctrlBtn.classList.toggle('active', on);
+      ctrlBtn.setAttribute('aria-pressed', String(on));
       lettersEl.hidden = !on;
       if (on) setClipboard(false);
       resizeHelperMenu();
@@ -2396,6 +2425,169 @@
     document.addEventListener('keyup', onKeyUp);
   }
 
+  // ---------- browser links ----------
+  // Plain URLs and OSC 8 labels come from a click, so they open immediately.
+  // OSC 777 comes from a program, so it is gated by a full-screen confirmation
+  // that names the originating tab and group. A request from a different group
+  // is dropped: a background session must never prompt in the group you see.
+  const pendingBrowserLinks = [];
+  let linkGate = null;
+
+  function browserUrl(raw) {
+    if (typeof raw !== 'string' || raw.length > 16384 || !/^https?:\/\//i.test(raw) || /[\\\x00-\x1f\x7f-\x9f]/.test(raw)) return null;
+    try {
+      const url = new URL(raw);
+      if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.href.length > 16384) return null;
+      return url.href;
+    } catch { return null; }
+  }
+
+  // A program asks the terminal to open a link through OSC 777. The client
+  // labels the request with the tab you are viewing; no extra protocol needed.
+  function parseBrowserRequest(data) {
+    const prefix = 'webmux-open;';
+    if (typeof data !== 'string' || !data.startsWith(prefix) || data.length > 24576) return null;
+    try {
+      const bytes = Uint8Array.from(atob(data.slice(prefix.length)), c => c.charCodeAt(0));
+      return browserUrl(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    } catch { return null; }
+  }
+
+  function openBrowserWindow(url) {
+    let popup;
+    try {
+      // Opening a blank tab first lets us detect popup blocking. Supplying
+      // `noopener` to window.open returns null even when a tab actually opens.
+      popup = window.open('', '_blank');
+      if (!popup) return false;
+      popup.opener = null;
+      popup.location.replace(url);
+      return true;
+    } catch {
+      try { popup?.close(); } catch {}
+      return false;
+    }
+  }
+
+  function ensureLinkGate() {
+    if (linkGate) return linkGate;
+    const gate = document.createElement('dialog');
+    gate.id = 'link-gate';
+    gate.className = 'link-gate';
+    gate.setAttribute('aria-label', 'Open site');
+    gate.tabIndex = -1;
+    gate.innerHTML = `
+      <div class="link-gate-inner">
+        <p class="link-gate-url" dir="ltr"></p>
+        <p class="link-gate-full" dir="ltr" hidden></p>
+        <div class="link-gate-foot">
+          <span class="link-gate-origin"><span class="idx"></span><span class="name"></span></span>
+          <span class="link-gate-spacer"></span>
+          <button type="button" class="link-gate-cancel">Cancel</button>
+          <button type="button" class="link-gate-open">Open</button>
+        </div>
+      </div>`;
+    document.body.appendChild(gate);
+    // A dialog is already modal; keeping keys here stops terminal shortcuts.
+    gate.addEventListener('keydown', e => e.stopPropagation());
+    gate.addEventListener('cancel', e => { e.preventDefault(); dismissLinkGate(); });
+    gate.addEventListener('click', e => { if (e.target === gate) dismissLinkGate(); });
+    gate.querySelector('.link-gate-cancel').addEventListener('click', dismissLinkGate);
+    gate.querySelector('.link-gate-open').addEventListener('click', () => {
+      const entry = pendingBrowserLinks[0];
+      if (!entry) return;
+      if (!openBrowserWindow(entry.url)) {
+        toast('Popup blocked. Allow popups for this site, then try again.');
+        return;
+      }
+      advanceLinkGate();
+    });
+    linkGate = gate;
+    return gate;
+  }
+
+  function renderLinkGate() {
+    if (!pendingBrowserLinks.length) { closeLinkGate(); return; }
+    const gate = ensureLinkGate();
+    const fresh = !gate.open;
+    if (fresh) gate.showModal();
+    const entry = pendingBrowserLinks[0];
+    const tab = windows.find(w => w.active);
+    const label = gate.querySelector('.link-gate-url');
+    label.textContent = entry.url;
+    label.title = entry.url;
+    // A very long URL is cut to one line; the exact value stays below.
+    const full = gate.querySelector('.link-gate-full');
+    full.textContent = entry.url;
+    const origin = gate.querySelector('.link-gate-origin');
+    origin.title = currentSession || '';
+    origin.querySelector('.idx').textContent = tab ? tab.index : '·';
+    origin.querySelector('.name').textContent = tab ? tab.name : 'terminal';
+
+    if (fresh) requestAnimationFrame(() => {
+      gate.classList.add('visible');
+      gate.focus();
+      full.hidden = label.scrollWidth <= label.clientWidth;
+    });
+    else requestAnimationFrame(() => { full.hidden = label.scrollWidth <= label.clientWidth; });
+  }
+
+  function closeLinkGate({ focus = true } = {}) {
+    if (!linkGate) return;
+    const gate = linkGate;
+    linkGate = null;
+    gate.classList.remove('visible');
+    if (gate.open) gate.close();
+    gate.remove();
+    if (focus && !pendingBrowserLinks.length) focusTerm();
+  }
+
+  function advanceLinkGate() {
+    pendingBrowserLinks.shift();
+    if (!pendingBrowserLinks.length) { closeLinkGate(); return; }
+    renderLinkGate();
+    linkGate?.querySelector('.link-gate-open').focus();
+  }
+
+  function dismissLinkGate() {
+    if (!linkGate) return;
+    pendingBrowserLinks.shift();
+    if (!pendingBrowserLinks.length) { closeLinkGate(); return; }
+    renderLinkGate();
+    linkGate?.querySelector('.link-gate-cancel').focus();
+  }
+
+  function clearBrowserLinks() {
+    pendingBrowserLinks.length = 0;
+    closeLinkGate({ focus: false });
+  }
+
+  function requestBrowserLink(raw) {
+    const url = browserUrl(raw);
+    if (!url) return;
+    if (pendingBrowserLinks.some(entry => entry.url === url)) { renderLinkGate(); return; }
+    if (pendingBrowserLinks.length >= 10) return;
+    pendingBrowserLinks.push({ url });
+    renderLinkGate();
+  }
+
+  // User-activated links (xterm OSC 8 labels and detected URLs) open straight
+  // away; only a program-issued OSC 777 request needs confirmation.
+  function openBrowserLink(event, raw) {
+    event?.preventDefault();
+    const url = browserUrl(raw);
+    if (!url) { if (event) toast('Only http and https links can be opened.'); return; }
+    if (event && openBrowserWindow(url)) return;
+    requestBrowserLink(url);
+  }
+
+  function handleBrowserOsc(data) {
+    if (viewOnlyAttach || spectatorMode || !token) return true;
+    const url = parseBrowserRequest(data);
+    if (url) requestBrowserLink(url);
+    return true;
+  }
+
   // ---------- terminal ----------
   // detect mobile/touch device for smaller default font
   const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -2480,6 +2672,7 @@
       customGlyphs: !!perfPrefs.fancyGlyphs,
       rescaleOverlappingGlyphs: !!perfPrefs.fancyGlyphs,
       drawBoldTextInBrightColors: false,
+      linkHandler: { activate: openBrowserLink },
       theme: {
         background: '#000000', foreground: '#c8cdd6',
         cursor: '#e8b15a', cursorAccent: '#0b0c0e',
@@ -2496,7 +2689,7 @@
     });
     fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
-    if (window.WebLinksAddon?.WebLinksAddon) term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    if (window.WebLinksAddon?.WebLinksAddon) term.loadAddon(new WebLinksAddon.WebLinksAddon(openBrowserLink));
     if (window.Unicode11Addon?.Unicode11Addon) {
       term.loadAddon(new Unicode11Addon.Unicode11Addon());
       term.unicode.activeVersion = '11';
@@ -2848,6 +3041,12 @@
       if (b64 === '?') return true;
       try { copyText(new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)))); } catch {}
       return true;
+    });
+
+    term.parser.registerOscHandler(777, data => {
+      const prefix = 'webmux-open;';
+      if (!data.startsWith(prefix)) return false;
+      return handleBrowserOsc(data);
     });
 
     // copy/paste keybinds
@@ -3950,6 +4149,7 @@
   function switchSession(name) {
     if (!name || name === currentSession) return;
     currentSession = name;
+    clearBrowserLinks();
     localStore.setItem('webmux-session', name);
     sessionStore.setItem('webmux-session', name);
     renderSessions();

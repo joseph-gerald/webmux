@@ -155,6 +155,14 @@ test('frontend browser regressions', {
     assert.equal(await h.page.evaluate(() => window.testInput.join('').includes('clipboard draft')), false);
     await h.page.click('[data-act=clipboard-paste]');
     await h.page.waitForFunction(() => window.testInput.join('').includes('clipboard draft'));
+    // The QWERTY ctrl pad sends the control byte and releases the latch.
+    await h.page.click('[data-ctrl]');
+    // The menu re-clamps its position a frame after panels toggle.
+    await h.page.waitForSelector('.am-letter[aria-label="ctrl C"]', { visible: true });
+    await h.page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await h.page.click('.am-letter[aria-label="ctrl C"]');
+    await h.page.waitForFunction(() => window.testInput.join('').includes('\x03'));
+    assert.equal(await h.page.$eval('[data-ctrl]', e => e.getAttribute('aria-pressed')), 'false');
   });
 
   await t.test('overlays isolate keys, keep focus through reconnect/OSC52, and close with Escape', async t => {
@@ -410,6 +418,103 @@ test('frontend browser regressions', {
       }));
     });
     await h.page.waitForFunction(() => window.testTerm.getSelection() === 'hello');
+  });
+
+  await t.test('browser-open requests are confirmed, attributed, and scoped to the current group', async t => {
+    const h = await harness(t, { mobile: true });
+    h.state.routes.set('GET /link-target', (_req, res) => res.type('html').send('<title>Opened link</title>'));
+    await h.goto();
+    await h.login();
+    await h.page.evaluate(() => {
+      window.testNativeOpen = window.open;
+      window.testOpenAttempts = 0;
+      window.open = () => { window.testOpenAttempts++; return null; };
+    });
+    const first = new URL(h.origin + '/link-target?name=日本語&step=1#ok').href;
+    const second = h.origin + '/link-target?second=1';
+    const osc = url => '\x1b]777;webmux-open;' + Buffer.from(url).toString('base64') + '\x07';
+    const invalid = ['javascript:alert(1)', 'data:text/html,test', 'file:///tmp/test', '//example.com',
+      'https://user:password@example.com/', 'https://example.com/\nnew', 'https://example.com/\\path', 'https://',
+      'https://example.com/' + 'a'.repeat(17000)];
+    // Malformed requests must not prompt.
+    for (const socket of h.wss.clients) {
+      socket.send(invalid.map(url => osc(url)).join('')
+        + '\x1b]777;webmux-open;not base64!\x07\x1b]777;webmux-open;/w==\x07');
+    }
+    await h.page.evaluate(() => new Promise(r => setTimeout(r, 150)));
+    assert.equal(await h.page.$('#link-gate'), null, 'no prompt for invalid requests');
+
+    for (const socket of h.wss.clients) socket.send(osc(first) + osc(first) + osc(second));
+    await h.page.waitForSelector('#link-gate[open]');
+    assert.equal(await h.page.$eval('.link-gate-url', e => e.textContent), first);
+    assert.equal(await h.page.$eval('.link-gate-origin .idx', e => e.textContent), '0');
+    assert.equal(await h.page.$eval('.link-gate-origin .name', e => e.textContent), 'shell');
+    assert.equal(await h.page.evaluate(() => window.testOpenAttempts), 0, 'program requests wait for confirmation');
+    assert.equal(await h.page.$eval('.link-gate-inner', e => {
+      const r = e.getBoundingClientRect();
+      return r.top >= 0 && r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight
+        && e.scrollWidth <= e.clientWidth;
+    }), true, 'prompt fits the mobile viewport');
+    assert.equal(await h.page.evaluate(() => document.activeElement.closest('#link-gate') !== null), true,
+      'focus stays inside the prompt');
+
+    await h.page.click('.link-gate-open');
+    assert.equal(await h.page.evaluate(() => window.testOpenAttempts), 1, 'blocked open is attempted once');
+    assert.equal(await h.page.$eval('.link-gate-url', e => e.textContent), first,
+      'blocked retries retain the URL');
+
+    await h.page.evaluate(() => { window.open = window.testNativeOpen; });
+    const opened = browser.waitForTarget(target => target.url() === first);
+    await h.page.click('.link-gate-open');
+    const popup = await (await opened).page();
+    assert.equal(await popup.evaluate(() => window.opener), null);
+    await popup.close();
+    await h.page.bringToFront();
+    await h.page.waitForFunction(url => document.querySelector('.link-gate-url')?.textContent === url, {}, second);
+    await h.page.click('.link-gate-cancel');
+    await h.page.waitForFunction(() => !document.querySelector('#link-gate'));
+    assert.deepEqual(await h.page.evaluate(() => window.testInput), [], 'prompt keeps keys out of the terminal');
+
+    // View-only clients can click links but must not receive browser-launch side effects.
+    for (const socket of h.wss.clients) socket.close(4004, 'test takeover');
+    await h.page.waitForSelector('#btn-view-only', { visible: true });
+    await h.page.click('#btn-view-only');
+    await h.page.waitForFunction(() => window.testSockets.at(-1).testAppReady && document.body.classList.contains('view-only'));
+    for (const socket of h.wss.clients) socket.send(osc(first) + 'request-processed');
+    await h.page.waitForFunction(() => window.testTerm.buffer.active.getLine(0)?.translateToString().includes('request-processed'));
+    assert.equal(await h.page.$('#link-gate'), null);
+  });
+
+  await t.test('plain URLs and OSC 8 labels open real browser tabs without a confirmation dialog', async t => {
+    const h = await harness(t);
+    h.state.routes.set('GET /link-target', (_req, res) => res.type('html').send('<title>Opened link</title>'));
+    await h.goto();
+    await h.login();
+    let dialogs = 0;
+    h.page.on('dialog', d => { dialogs++; void d.dismiss(); });
+    const urls = [h.origin + '/link-target?plain=1', h.origin + '/link-target?label=1'];
+    await h.page.evaluate(urls => new Promise(resolve => {
+      window.testTerm.reset();
+      window.testTerm.write(urls[0] + '\r\n\x1b]8;;' + urls[1] + '\x1b\\labeled link\x1b]8;;\x1b\\', resolve);
+    }), urls);
+    for (let row = 0; row < urls.length; row++) {
+      const point = await h.page.evaluate(row => {
+        const term = window.testTerm;
+        const rect = term.element.querySelector('.xterm-screen').getBoundingClientRect();
+        return { x: rect.left + rect.width / term.cols * 3.5,
+          y: rect.top + rect.height / term.rows * (row + .5) };
+      }, row);
+      await h.page.mouse.move(point.x, point.y);
+      await h.page.waitForSelector('.xterm-cursor-pointer');
+      const opened = browser.waitForTarget(target => target.url() === urls[row]);
+      await h.page.mouse.click(point.x, point.y);
+      const popup = await (await opened).page();
+      assert.equal(await popup.evaluate(() => window.opener), null);
+      await popup.close();
+      await h.page.bringToFront();
+    }
+    assert.equal(dialogs, 0);
+    assert.equal(await h.page.$('#browser-links'), null, 'successful opening does not show a false popup-blocked prompt');
   });
 
   await t.test('generic provider metadata, bounce guard, and network failure preserve login choices', async t => {

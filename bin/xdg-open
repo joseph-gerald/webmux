@@ -1,0 +1,5 @@
+#!/bin/sh
+# URL-only browser launcher for the PATH used by webmux panes.
+# Resolve through symlinks so an installed shim still finds webmux-open.
+self=$(readlink -f "$0")
+exec "$(dirname -- "$self")/webmux-open" "$@"
