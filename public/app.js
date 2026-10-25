@@ -2480,11 +2480,12 @@
       <div class="link-gate-inner">
         <p class="link-gate-url" dir="ltr"></p>
         <p class="link-gate-full" dir="ltr" hidden></p>
-        <div class="link-gate-foot">
+        <div class="link-gate-origin-row">
           <span class="link-gate-origin"><span class="idx"></span><span class="name"></span></span>
-          <span class="link-gate-spacer"></span>
+        </div>
+        <div class="link-gate-actions">
           <button type="button" class="link-gate-cancel">Cancel</button>
-          <button type="button" class="link-gate-open">Open</button>
+          <button type="button" class="link-gate-open">Open site</button>
         </div>
       </div>`;
     document.body.appendChild(gate);

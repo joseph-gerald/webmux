@@ -1289,15 +1289,15 @@ body.perf-fx-none .drop-veil, body.perf-fx-light .drop-veil, body.perf-high .dro
   font: 400 12.5px/1.55 var(--mono);
   overflow-wrap: anywhere; user-select: text;
 }
-.link-gate-foot {
-  display: flex; align-items: center; gap: 14px;
+.link-gate-origin-row {
+  display: flex; align-items: center;
   margin-top: 26px;
 }
 /* Same shape, index and weight as a tab in the strip. The group stays in the
    title attribute instead of adding another line of text. */
 .link-gate-origin {
   display: inline-flex; align-items: center; gap: 5px;
-  min-width: 0; max-width: 240px;
+  min-width: 0; max-width: 260px;
   padding: 4px 10px; border-radius: 6px;
   background: var(--pill-active); color: var(--fg);
   font: 400 11.5px var(--system); letter-spacing: -.01em;
@@ -1309,30 +1309,35 @@ body.perf-fx-none .drop-veil, body.perf-fx-light .drop-veil, body.perf-high .dro
 .link-gate-origin .name {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.link-gate-spacer { flex: 1; }
-.link-gate-foot button {
-  border: 0; background: transparent; padding: 6px 2px; min-height: 32px;
-  color: var(--fg-secondary); font: 500 13px var(--system);
-  cursor: pointer; white-space: nowrap;
-  transition: color .12s ease;
+.link-gate-actions {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-top: 14px;
 }
-.link-gate-foot button:hover { color: var(--fg); }
-.link-gate-foot button:focus-visible {
-  color: var(--fg);
-  outline: 2px solid rgba(255, 255, 255, .7); outline-offset: 3px; border-radius: 4px;
+.link-gate-actions button {
+  min-height: 50px; padding: 0 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px;
+  background: rgba(255, 255, 255, .07); color: var(--fg); white-space: nowrap;
+  font: 500 14px var(--system); cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
 }
-.link-gate-foot .link-gate-open { color: var(--fg); font-weight: 600; }
-.link-gate-foot .link-gate-open:hover { color: #fff; }
+.link-gate-actions button:hover { background: rgba(255, 255, 255, .11); border-color: rgba(255, 255, 255, .2); }
+.link-gate-actions button:active { transform: translateY(1px); }
+.link-gate-actions button:focus-visible { outline: 2px solid rgba(255, 255, 255, .75); outline-offset: 2px; }
+.link-gate-actions .link-gate-open {
+  background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+}
+.link-gate-actions .link-gate-open:hover { background: #2a95ff; border-color: #2a95ff; }
 @media (max-width: 560px) {
   .link-gate { padding: 22px; }
   .link-gate-url { font-size: 24px; }
-  .link-gate-foot { margin-top: 22px; gap: 10px; }
-  .link-gate-foot button { min-height: 40px; padding-inline: 6px; }
-  .link-gate-origin { max-width: 170px; }
-  .link-gate-spacer { min-width: 4px; }
+  .link-gate-origin-row { margin-top: 22px; }
+  .link-gate-origin { max-width: 200px; }
+  .link-gate-actions { gap: 8px; }
+  .link-gate-actions button { min-height: 52px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .link-gate, .link-gate-inner, .link-gate-foot button { transition: none; }
+  .link-gate, .link-gate-inner, .link-gate-actions button { transition: none; }
 }
 
 /* ---------- mobile assist controls ---------- */
