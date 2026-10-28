@@ -515,6 +515,14 @@ test('frontend browser regressions', {
     }
     assert.equal(dialogs, 0);
     assert.equal(await h.page.$('#browser-links'), null, 'successful opening does not show a false popup-blocked prompt');
+
+    // TUIs can forward the click and call the system opener for the same URL.
+    // The duplicate program request must not queue a prompt after a direct open.
+    for (const socket of h.wss.clients) {
+      socket.send('\x1b]777;webmux-open;' + Buffer.from(urls[0]).toString('base64') + '\x07');
+    }
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(await h.page.$('#link-gate'), null, 'recently clicked URLs are not queued again');
   });
 
   await t.test('generic provider metadata, bounce guard, and network failure preserve login choices', async t => {

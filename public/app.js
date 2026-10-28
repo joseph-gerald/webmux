@@ -2431,7 +2431,27 @@
   // that names the originating tab and group. A request from a different group
   // is dropped: a background session must never prompt in the group you see.
   const pendingBrowserLinks = [];
+  const recentBrowserOpens = new Map();
   let linkGate = null;
+  let linkGateTimer = 0;
+  // A TUI may both forward the click to webmux and call the system opener for
+  // the same URL. Ignore the program request when a direct click just opened it.
+  const BROWSER_OPEN_DEDUPE_MS = 5000;
+
+  function noteBrowserOpened(url) {
+    const now = Date.now();
+    for (const [value, at] of recentBrowserOpens) {
+      if (now - at > BROWSER_OPEN_DEDUPE_MS) recentBrowserOpens.delete(value);
+    }
+    recentBrowserOpens.set(url, now);
+  }
+
+  function openedRecently(url) {
+    const at = recentBrowserOpens.get(url);
+    if (!at) return false;
+    if (Date.now() - at > BROWSER_OPEN_DEDUPE_MS) { recentBrowserOpens.delete(url); return false; }
+    return true;
+  }
 
   function browserUrl(raw) {
     if (typeof raw !== 'string' || raw.length > 16384 || !/^https?:\/\//i.test(raw) || /[\\\x00-\x1f\x7f-\x9f]/.test(raw)) return null;
@@ -2501,6 +2521,7 @@
         toast('Popup blocked. Allow popups for this site, then try again.');
         return;
       }
+      noteBrowserOpened(entry.url);
       advanceLinkGate();
     });
     linkGate = gate;
@@ -2534,6 +2555,8 @@
   }
 
   function closeLinkGate({ focus = true } = {}) {
+    clearTimeout(linkGateTimer);
+    linkGateTimer = 0;
     if (!linkGate) return;
     const gate = linkGate;
     linkGate = null;
@@ -2563,13 +2586,21 @@
     closeLinkGate({ focus: false });
   }
 
+  function scheduleLinkGate() {
+    if (linkGate) { renderLinkGate(); return; }
+    // Give a simultaneous terminal click a moment to cancel the prompt instead
+    // of flashing a dialog for a URL the user just opened themselves.
+    clearTimeout(linkGateTimer);
+    linkGateTimer = setTimeout(() => { linkGateTimer = 0; renderLinkGate(); }, 120);
+  }
+
   function requestBrowserLink(raw) {
     const url = browserUrl(raw);
-    if (!url) return;
+    if (!url || openedRecently(url)) return;
     if (pendingBrowserLinks.some(entry => entry.url === url)) { renderLinkGate(); return; }
     if (pendingBrowserLinks.length >= 10) return;
     pendingBrowserLinks.push({ url });
-    renderLinkGate();
+    scheduleLinkGate();
   }
 
   // User-activated links (xterm OSC 8 labels and detected URLs) open straight
@@ -2578,7 +2609,16 @@
     event?.preventDefault();
     const url = browserUrl(raw);
     if (!url) { if (event) toast('Only http and https links can be opened.'); return; }
-    if (event && openBrowserWindow(url)) return;
+    if (event && openBrowserWindow(url)) {
+      noteBrowserOpened(url);
+      const match = pendingBrowserLinks.findIndex(entry => entry.url === url);
+      if (match !== -1) {
+        pendingBrowserLinks.splice(match, 1);
+        if (pendingBrowserLinks.length) renderLinkGate();
+        else closeLinkGate();
+      }
+      return;
+    }
     requestBrowserLink(url);
   }
 
