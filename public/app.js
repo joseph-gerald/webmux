@@ -1517,7 +1517,7 @@
       const app = !!(term.modes && term.modes.applicationCursorKeysMode);
       data = {
         Escape: '\x1b',
-        Tab: '\t',
+        Tab: o.shiftKey ? '\x1b[Z' : '\t',
         Enter: '\r',
         Backspace: '\x7f',
         ArrowUp: app ? '\x1bOA' : '\x1b[A',
@@ -1526,6 +1526,8 @@
         ArrowLeft: app ? '\x1bOD' : '\x1b[D',
       }[o.key] || '';
     }
+    // alt+key is ESC prefixed; sequences that already start with ESC stay as-is.
+    if (o.altKey && data && data.charCodeAt(0) !== 0x1b) data = '\x1b' + data;
     if (data) queueInput(data);
   }
 
@@ -1618,6 +1620,35 @@
       </button>
     `;
     document.body.appendChild(host);
+
+    // Persistent mobile key bar. The floating helper stays for the full panel;
+    // this is the fast path for the keys used while typing.
+    const keybar = document.createElement('div');
+    keybar.id = 'keybar';
+    keybar.className = 'keybar';
+    keybar.setAttribute('role', 'toolbar');
+    keybar.setAttribute('aria-label', 'terminal keys');
+    keybar.innerHTML = `
+      <button class="kb-btn kb-icon" type="button" data-kb="helper" aria-label="open helper" title="helper">${icon('keyboard')}</button>
+      <span class="kb-sep" aria-hidden="true"></span>
+      <button class="kb-btn" type="button" data-act="paste">paste</button>
+      <button class="kb-btn" type="button" data-act="copy">copy</button>
+      <button class="kb-btn" type="button" data-act="clipboard">clipboard</button>
+      <span class="kb-sep" aria-hidden="true"></span>
+      <button class="kb-btn" type="button" data-k="esc">esc</button>
+      <button class="kb-btn" type="button" data-k="tab">tab</button>
+      <button class="kb-btn" type="button" data-k="stab">shift+tab</button>
+      <button class="kb-btn kb-mod" type="button" data-mod="ctrl" aria-pressed="false">ctrl</button>
+      <button class="kb-btn kb-mod" type="button" data-mod="alt" aria-pressed="false">alt</button>
+      <span class="kb-sep" aria-hidden="true"></span>
+      <button class="kb-btn kb-icon" type="button" data-k="left" aria-label="left">${icon('left')}</button>
+      <button class="kb-btn kb-icon" type="button" data-k="up" aria-label="up">${icon('up')}</button>
+      <button class="kb-btn kb-icon" type="button" data-k="down" aria-label="down">${icon('down')}</button>
+      <button class="kb-btn kb-icon" type="button" data-k="right" aria-label="right">${icon('right')}</button>
+      <button class="kb-btn" type="button" data-k="enter">enter</button>
+      <button class="kb-btn kb-icon" type="button" data-k="bs" aria-label="backspace">${icon('backspace')}</button>`;
+    document.body.appendChild(keybar);
+    document.body.classList.add('has-keybar');
 
     const fab = host.querySelector('.assist-fab');
     const ctrlBtn = host.querySelector('[data-ctrl]');
@@ -1826,11 +1857,12 @@
     const fabBounds = () => {
       const barsBottom = $('#tabs')?.closest('.bar')?.getBoundingClientRect().bottom || 76;
       const pad = 12;
+      const kb = keybar.offsetHeight || 0;
       return {
         minX: pad,
         maxX: Math.max(pad, window.innerWidth - fab.offsetWidth - pad),
         minY: barsBottom + 8,
-        maxY: Math.max(barsBottom + 8, window.innerHeight - fab.offsetHeight - pad),
+        maxY: Math.max(barsBottom + 8, window.innerHeight - fab.offsetHeight - pad - kb),
       };
     };
     const placeFab = (x, y) => {
@@ -1848,13 +1880,14 @@
       const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
       const width = viewport?.width || window.innerWidth, height = viewport?.height || window.innerHeight;
       const minY = Math.max(barsBottom + 8, top + pad);
-      // Keep the editor and its actions scrollable above the iOS keyboard.
-      menu.style.maxHeight = Math.max(44, top + height - minY - pad) + 'px';
+      const kb = keybar.offsetHeight || 0;
+      // Keep the editor and its actions scrollable above the key bar and keyboard.
+      menu.style.maxHeight = Math.max(44, top + height - minY - pad - kb) + 'px';
       return {
         minX: left + pad,
         maxX: Math.max(left + pad, left + width - menu.offsetWidth - pad),
         minY,
-        maxY: Math.max(minY, top + height - menu.offsetHeight - pad),
+        maxY: Math.max(minY, top + height - menu.offsetHeight - pad - kb),
       };
     };
     const placeMenu = (x, y) => {
@@ -1958,10 +1991,8 @@
     const onVisualViewport = () => { if (host.classList.contains('open')) resizeHelperMenu(); };
     window.visualViewport?.addEventListener('resize', onVisualViewport);
     window.visualViewport?.addEventListener('scroll', onVisualViewport);
-    fab.addEventListener('click', () => {
-      if (didDrag) { didDrag = false; return; }
+    function setHelperOpen(open) {
       dismissKeyboard();
-      const open = !host.classList.contains('open');
       if (open) {
         positionMenu();
         void menu.offsetWidth;
@@ -1970,6 +2001,10 @@
         host.classList.remove('open');
       }
       fab.setAttribute('aria-expanded', String(open));
+    }
+    fab.addEventListener('click', () => {
+      if (didDrag) { didDrag = false; return; }
+      setHelperOpen(!host.classList.contains('open'));
     });
     const closeHelper = () => {
       if (document.activeElement === clipboardText) clipboardText.blur();
@@ -2008,6 +2043,7 @@
     const KEY = {
       esc: { key: 'Escape', code: 'Escape' },
       tab: { key: 'Tab', code: 'Tab' },
+      stab: { key: 'Tab', code: 'Tab', shiftKey: true },
       enter: { key: 'Enter', code: 'Enter' },
       bs: { key: 'Backspace', code: 'Backspace' },
       up: { key: 'ArrowUp', code: 'ArrowUp' },
@@ -2052,6 +2088,46 @@
 
     refreshClipboardHistory();
     applyPerformanceMode();
+
+    // ---------- persistent mobile key bar ----------
+    let kbCtrl = false, kbAlt = false;
+    const kbMods = { ctrl: keybar.querySelector('[data-mod="ctrl"]'), alt: keybar.querySelector('[data-mod="alt"]') };
+    function syncKbMods() {
+      kbMods.ctrl.classList.toggle('active', kbCtrl);
+      kbMods.alt.classList.toggle('active', kbAlt);
+      kbMods.ctrl.setAttribute('aria-pressed', String(kbCtrl));
+      kbMods.alt.setAttribute('aria-pressed', String(kbAlt));
+    }
+    keybar.addEventListener('click', e => {
+      if (e.target.closest('[data-kb]')) { setHelperOpen(true); return; }
+      const mod = e.target.closest('[data-mod]');
+      if (mod) {
+        const name = mod.dataset.mod;
+        if (name === 'ctrl') kbCtrl = !kbCtrl;
+        else if (name === 'alt') kbAlt = !kbAlt;
+        syncKbMods();
+        return;
+      }
+      const key = e.target.closest('[data-k]');
+      if (key) {
+        const spec = KEY[key.dataset.k];
+        if (spec) pressKey({ ...spec, ctrlKey: kbCtrl, altKey: kbAlt });
+        kbCtrl = kbAlt = false;
+        syncKbMods();
+        return;
+      }
+      const act = e.target.closest('[data-act]');
+      if (!act) return;
+      const name = act.dataset.act;
+      if (name === 'paste') void readHelperClipboard(true);
+      else if (name === 'copy') {
+        if (term.hasSelection()) void copyHelperText(term.getSelection());
+        else toast('nothing selected — long-press text to select');
+      } else if (name === 'clipboard') {
+        setHelperOpen(true);
+        setClipboard(true);
+      }
+    });
 
     // ---------- selection mode ----------
     // Long-press enters a copy mode: capture-phase touch handlers own all
@@ -2423,6 +2499,11 @@
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     document.addEventListener('keyup', onKeyUp);
+
+    // Reserve the bar's height in the terminal and keep the helper above it.
+    // The first frame can land before the bar has its final geometry.
+    requestAnimationFrame(() => { fitSafe(); scheduleMirrorUpdate(); });
+    setTimeout(() => { fitSafe(); scheduleMirrorUpdate(); }, 80);
   }
 
   // ---------- browser links ----------

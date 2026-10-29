@@ -148,6 +148,21 @@ test('frontend browser regressions', {
     const h = await harness(t, { deniedStorage: true, mobile: true });
     await h.goto();
     await h.login();
+    // The persistent mobile key bar is scrollable, refits the terminal above
+    // itself, and sends keys without opening the helper panel.
+    await h.page.waitForSelector('#keybar');
+    assert.equal(await h.page.$eval('#keybar', e => e.scrollWidth > e.clientWidth), true,
+      'key bar scrolls horizontally');
+    assert.equal(await h.page.evaluate(() => {
+      const screen = document.querySelector('.xterm-screen').getBoundingClientRect();
+      const bar = document.querySelector('#keybar').getBoundingClientRect();
+      return screen.bottom <= bar.top + 1;
+    }), true, 'terminal ends above the key bar');
+    await h.page.click('#keybar [data-k=stab]');
+    await h.page.waitForFunction(() => window.testInput.join('').includes('\x1b[Z'));
+    await h.page.click('#keybar [data-k=esc]');
+    await h.page.waitForFunction(() => window.testInput.join('').includes('\x1b[Z\x1b'));
+
     await h.page.click('.assist-fab');
     await h.page.waitForSelector('.assist.open');
     await h.page.click('[data-act=clipboard]');

@@ -35,6 +35,7 @@
   --bar-height: 40px;
   --tabs-height: 36px;
   --status-height: 24px;
+  --keybar-height: calc(52px + env(safe-area-inset-bottom, 0px));
   --bars-total: calc(var(--bar-height) + var(--tabs-height));
   --mono: 'JetBrainsMonoNF', 'SF Mono', ui-monospace, 'Cascadia Code', Menlo, monospace;
   --system: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
@@ -1338,6 +1339,49 @@ body.perf-fx-none .drop-veil, body.perf-fx-light .drop-veil, body.perf-high .dro
 }
 @media (prefers-reduced-motion: reduce) {
   .link-gate, .link-gate-inner, .link-gate-actions button { transition: none; }
+}
+
+/* ---------- persistent mobile key bar ---------- */
+.keybar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  height: var(--keybar-height);
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: rgba(10, 11, 13, .84);
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  user-select: none; -webkit-user-select: none;
+  touch-action: pan-x;
+  z-index: 80;
+}
+.keybar::-webkit-scrollbar { display: none; }
+.kb-btn {
+  flex: none; height: 40px; min-width: 40px; padding: 0 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .08); border-radius: 9px;
+  background: rgba(255, 255, 255, .055); color: var(--fg-secondary);
+  font: 500 12px var(--system); white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .1s ease, color .1s ease, border-color .1s ease;
+}
+.kb-btn:hover { color: var(--fg); background: rgba(255, 255, 255, .09); }
+.kb-btn:active { background: rgba(255, 255, 255, .14); color: var(--fg); }
+.kb-btn:focus-visible { outline: 2px solid rgba(255, 255, 255, .7); outline-offset: 2px; }
+.kb-btn .icon { width: 16px; height: 16px; }
+.kb-icon { width: 40px; padding: 0; }
+.kb-sep { flex: none; width: 1px; height: 22px; margin: 0 4px; background: rgba(255, 255, 255, .09); }
+.kb-mod.active {
+  color: #f2cd8b; border-color: rgba(232, 177, 90, .45); background: #2a2216;
+}
+body.has-keybar .term { margin-bottom: var(--keybar-height); }
+body.has-keybar .assist-fab { bottom: calc(var(--keybar-height) + 12px); }
+body.has-keybar #toast { bottom: calc(var(--keybar-height) + 12px); }
+body.has-keybar .sel-bar { bottom: calc(var(--keybar-height) + 92px); }
+@media (prefers-reduced-motion: reduce) {
+  .kb-btn { transition: none; }
 }
 
 /* ---------- mobile assist controls ---------- */
